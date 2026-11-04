@@ -9,18 +9,21 @@ implementation
 uses
   Winapi.Windows, System.SysUtils, System.Classes, System.IOUtils, System.Math,
   System.StrUtils, System.Character, System.Generics.Collections, ToolsAPI,
+  RADE.CodeSnippets,
   System.Actions, Vcl.Forms, Vcl.Controls, Vcl.StdCtrls,
   Vcl.ExtCtrls, Vcl.Graphics, Vcl.ImgList, Vcl.Menus, Vcl.ComCtrls,
+  Vcl.Dialogs,
   Vcl.ActnList;
 
 type
-  TSearchKind = (skAction, skFile, skText, skSymbol);
+  TSearchKind = (skAction, skFile, skText, skSymbol, skSnippet);
 
   TSearchResult = record
     Kind: TSearchKind;
     Title: string;
     Detail: string;
     FileName: string;
+    SnippetID: string;
     MenuItem: TMenuItem;
     Action: TContainedAction;
     Line: Integer;
@@ -103,6 +106,7 @@ type
     procedure UpdateResults;
     procedure SearchFiles(const AQuery: string);
     procedure SearchText(const AQuery: string);
+    procedure SearchSnippets(const AQuery: string);
     procedure AddResult(const AResult: TSearchResult);
     procedure SetStatus;
     procedure RunResult(const AResult: TSearchResult);
@@ -486,6 +490,7 @@ begin
       Item.Title := StripAccelerators(Action.Caption);
       Item.Detail := '';
       Item.FileName := '';
+      Item.SnippetID := '';
       Item.MenuItem := nil;
       Item.Action := Action;
       Item.Line := 0;
@@ -540,6 +545,7 @@ begin
         Item.Title := CaptionText;
         Item.Detail := '';
         Item.FileName := '';
+        Item.SnippetID := '';
         Item.MenuItem := AParent.Items[I];
         Item.Action := Action;
         Item.Line := 0;
@@ -631,6 +637,7 @@ begin
   Item.Title := Trim(ALineText);
   Item.Detail := Format('%s  |  %s:%d', [AKind, ExtractFileName(AFileName), ALine]);
   Item.FileName := AFileName;
+  Item.SnippetID := '';
   Item.MenuItem := nil;
   Item.Action := nil;
   Item.Line := ALine;
@@ -801,6 +808,17 @@ begin
         FChangingSearchText := False;
       end;
     end;
+    if StartsText('snippets=', TextValue) then
+    begin
+      SetSearchMode(skSnippet);
+      FChangingSearchText := True;
+      try
+        FSearchEdit.Text := Copy(TextValue, 10, MaxInt);
+        FSearchEdit.SelStart := Length(FSearchEdit.Text);
+      finally
+        FChangingSearchText := False;
+      end;
+    end;
   end;
   FSearchTimer.Enabled := False;
   FSearchTimer.Enabled := True;
@@ -815,6 +833,7 @@ begin
     skFile:
       begin
         FModeChipLabel.Caption := 'FILE  [x]';
+        FModeChip.Width := 72;
         FModeChip.Color := RGB(71, 91, 108);
         FSearchEdit.TextHint := 'Search filenames...';
         FModeChip.Visible := True;
@@ -822,13 +841,23 @@ begin
     skText:
       begin
         FModeChipLabel.Caption := 'TEXT  [x]';
+        FModeChip.Width := 72;
         FModeChip.Color := RGB(75, 86, 105);
         FSearchEdit.TextHint := 'Search exact text in files...';
+        FModeChip.Visible := True;
+      end;
+    skSnippet:
+      begin
+        FModeChipLabel.Caption := 'SNIPPETS  [x]';
+        FModeChip.Width := 106;
+        FModeChip.Color := RGB(75, 86, 105);
+        FSearchEdit.TextHint := 'Search names, categories, locations, and code...';
         FModeChip.Visible := True;
       end;
   else
     begin
       FModeChip.Visible := False;
+      FModeChip.Width := 72;
       if FEditorAvailable then
         FSearchEdit.TextHint := 'Search actions and symbols...'
       else
@@ -847,7 +876,17 @@ end;
 procedure TRADESearchForm.SearchTimerTimer(Sender: TObject);
 begin
   FSearchTimer.Enabled := False;
-  UpdateResults;
+  try
+    UpdateResults;
+  except
+    on E: Exception do
+    begin
+      FItems.Clear;
+      FResultsBox.Clear;
+      FStatusLabel.Caption := 'Search failed: ' + E.Message;
+      MessageDlg('Search failed: ' + E.Message, mtError, [mbOK], 0);
+    end;
+  end;
 end;
 
 procedure TRADESearchForm.SearchKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
@@ -1145,6 +1184,7 @@ begin
     Item.Title := ExtractFileName(FileName);
     Item.Detail := ExtractFilePath(FileName);
     Item.FileName := FileName;
+    Item.SnippetID := '';
     Item.MenuItem := nil;
     Item.Action := nil;
     Item.Line := 0;
@@ -1198,6 +1238,7 @@ begin
           Item.Title := ExtractFileName(FileName);
           Item.Detail := Format('%d: %s', [I + 1, Snippet]);
           Item.FileName := FileName;
+          Item.SnippetID := '';
           Item.MenuItem := nil;
           Item.Action := nil;
           Item.Line := I + 1;
@@ -1221,6 +1262,38 @@ begin
       on E: EEncodingError do
         Inc(FReadFailures);
     end;
+    if FItems.Count >= CMaximumResults then
+      Break;
+  end;
+end;
+
+procedure TRADESearchForm.SearchSnippets(const AQuery: string);
+var
+  Snippet: TRADESnippet;
+  Item: TSearchResult;
+  SearchTextAll: string;
+  Positions: TArray<Integer>;
+begin
+  for Snippet in RADECodeSnippets_GetAll do
+  begin
+    SearchTextAll := Snippet.Name + ' ' + Snippet.Category + ' ' +
+      Snippet.Location + ' ' + Snippet.Code;
+    if (AQuery <> '') and not IsSubsequence(SearchTextAll, AQuery, Positions) then
+      Continue;
+    Item.Kind := skSnippet;
+    Item.Title := Snippet.Name;
+    Item.Detail := Snippet.Category + '  |  ' + Snippet.Location;
+    Item.FileName := '';
+    Item.SnippetID := Snippet.ID;
+    Item.MenuItem := nil;
+    Item.Action := nil;
+    Item.Line := 0;
+    Item.Column := 0;
+    Item.IconText := 'S';
+    Item.IconColor := RGB(149, 119, 190);
+    Item.FuzzyHighlight := True;
+    Item.HighlightText := AQuery;
+    AddResult(Item);
     if FItems.Count >= CMaximumResults then
       Break;
   end;
@@ -1252,11 +1325,15 @@ begin
           if FItems.Count >= CMaximumResults then
             Break;
         end;
+      if Mode = skSnippet then
+        SearchSnippets('');
     end
     else if Mode = skFile then
       SearchFiles(Query)
     else if Mode = skText then
       SearchText(Query)
+    else if Mode = skSnippet then
+      SearchSnippets(Query)
     else
     begin
       for Item in FActions do
@@ -1297,7 +1374,15 @@ end;
 
 procedure TRADESearchForm.SetStatus;
 begin
-  if FReadFailures > 0 then
+  if FSearchMode = skSnippet then
+  begin
+    if FItems.Count = 0 then
+      FStatusLabel.Caption := 'No snippets found  |  Enter to insert  |  Esc to close'
+    else
+      FStatusLabel.Caption := Format('%d snippets  |  Enter to insert  |  Esc to close',
+        [FItems.Count])
+  end
+  else if FReadFailures > 0 then
     FStatusLabel.Caption := Format('%d results  |  %d files could not be read', [FItems.Count, FReadFailures])
   else if FItems.Count = 0 then
     FStatusLabel.Caption := 'No results  |  Click or Enter to open  |  Esc to close'
@@ -1314,6 +1399,11 @@ var
   Services: IOTAModuleServices;
   Module: IOTAModule;
 begin
+  if AResult.Kind = skSnippet then
+  begin
+    RADECodeSnippets_InsertByID(AResult.SnippetID);
+    Exit;
+  end;
   if AResult.Kind = skAction then
   begin
     if (AResult.Action <> nil) and AResult.Action.Enabled then

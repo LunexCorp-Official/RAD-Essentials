@@ -38,7 +38,9 @@ requires
 contains
   RADE.Core in 'RADE.Core.pas',
   RADE.Search in 'Utils\RADE_Search\RADE.Search.pas',
-  RADE.PDFViewer in 'Utils\RADE_PDFViewer\RADE.PDFViewer.pas' {RADEPDFViewerFrame},
+  RADE.CodeSnippets in 'Utils\RADE_Snippets\RADE.CodeSnippets.pas',
+  RADE.PDFium in 'Utils\RADE_PDFViewer\RADE.PDFium.pas',
+  RADE.PDFViewer in 'Utils\RADE_PDFViewer\RADE.PDFViewer.pas',
   RADE.Settings in 'Utils\RADE.Settings.pas' {RADESettingsForm},
   RADE.Refactor in 'Utils\RADE_Refactor\RADE.Refactor.pas',
   RADEGit.Core in 'Utils\RADE_Git\RADEGit.Core.pas',
@@ -49,6 +51,11 @@ contains
   RADEGit.Integration in 'Utils\RADE_Git\RADEGit.Integration.pas',
   RADEGit.OAuth in 'Utils\RADE_Git\RADEGit.OAuth.pas',
   RADEGit.RepoApi in 'Utils\RADE_Git\RADEGit.RepoApi.pas',
-  RADEGit.Settings in 'Utils\RADE_Git\RADEGit.Settings.pas';
+  RADEGit.Settings in 'Utils\RADE_Git\RADEGit.Settings.pas',
+  DiscordPresenceWizard in 'Utils\RADE_Discord\Wizard\DiscordPresenceWizard.pas',
+  RADcordConfig in 'Utils\RADE_Discord\Config\RADcordConfig.pas',
+  RADcordPresence in 'Utils\RADE_Discord\Common\RADcordPresence.pas',
+  EditorNotifier in 'Utils\RADE_Discord\OTA\EditorNotifier.pas',
+  DiscordRPC in 'Utils\RADE_Discord\Discord\DiscordRPC.pas';
 
 end.

@@ -27,6 +27,12 @@ type
     ShapePDF: TShape;
     ShapeSearch: TShape;
     LblShortcutInstructions: TLabel;
+    LblRADcordTitle: TLabel;
+    ChkRADcordFileName: TCheckBox;
+    ChkRADcordProjectName: TCheckBox;
+    ChkRADcordLineNumber: TCheckBox;
+    ChkRADcordElapsedTime: TCheckBox;
+    ChkRADcordIdlePresence: TCheckBox;
     BtnSave: TButton;
     BtnCancel: TButton;
     procedure FormCreate(Sender: TObject);
@@ -42,6 +48,9 @@ type
   end;
 
 implementation
+
+uses
+  RADcordConfig;
 
 {$R *.dfm}
 
@@ -122,6 +131,7 @@ end;
 procedure TRADESettingsForm.LoadSettings;
 var
   Ini: TIniFile;
+  RADcordSettings: TRADcordSettings;
 begin
   Ini := TIniFile.Create(GetIniPath);
   try
@@ -131,11 +141,19 @@ begin
   finally
     Ini.Free;
   end;
+
+  RADcordSettings := ReadConfiguredSettings;
+  ChkRADcordFileName.Checked := RADcordSettings.ShowFileName;
+  ChkRADcordProjectName.Checked := RADcordSettings.ShowProjectName;
+  ChkRADcordLineNumber.Checked := RADcordSettings.ShowLineNumber;
+  ChkRADcordElapsedTime.Checked := RADcordSettings.ShowElapsedTime;
+  ChkRADcordIdlePresence.Checked := RADcordSettings.ShowIdlePresence;
 end;
 
 procedure TRADESettingsForm.SaveSettings;
 var
   Ini: TIniFile;
+  RADcordSettings: TRADcordSettings;
 begin
   Ini := TIniFile.Create(GetIniPath);
   try
@@ -145,6 +163,13 @@ begin
   finally
     Ini.Free;
   end;
+
+  RADcordSettings.ShowFileName := ChkRADcordFileName.Checked;
+  RADcordSettings.ShowProjectName := ChkRADcordProjectName.Checked;
+  RADcordSettings.ShowLineNumber := ChkRADcordLineNumber.Checked;
+  RADcordSettings.ShowElapsedTime := ChkRADcordElapsedTime.Checked;
+  RADcordSettings.ShowIdlePresence := ChkRADcordIdlePresence.Checked;
+  WriteConfiguredSettings(RADcordSettings);
 end;
 
 procedure TRADESettingsForm.BtnSaveClick(Sender: TObject);

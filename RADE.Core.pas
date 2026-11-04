@@ -11,16 +11,26 @@ type
   TRADEKeyBinding = class(TNotifierObject, IOTAKeyboardBinding)
   private
     FFormatXKey, FPDFKey, FSearchKey: TShortCut;
+    FSnippet1Key, FSnippet2Key, FSnippet3Key: TShortCut;
     FOnFormatX, FOnPDF, FOnSearch: TNotifyEvent;
+    FOnSnippet1, FOnSnippet2, FOnSnippet3: TNotifyEvent;
     procedure DoFormatX(const Context: IOTAKeyContext; KeyCode: TShortCut;
       var BindingResult: TKeyBindingResult);
     procedure DoPDF(const Context: IOTAKeyContext; KeyCode: TShortCut;
       var BindingResult: TKeyBindingResult);
     procedure DoSearch(const Context: IOTAKeyContext; KeyCode: TShortCut;
       var BindingResult: TKeyBindingResult);
+    procedure DoSnippet1(const Context: IOTAKeyContext; KeyCode: TShortCut;
+      var BindingResult: TKeyBindingResult);
+    procedure DoSnippet2(const Context: IOTAKeyContext; KeyCode: TShortCut;
+      var BindingResult: TKeyBindingResult);
+    procedure DoSnippet3(const Context: IOTAKeyContext; KeyCode: TShortCut;
+      var BindingResult: TKeyBindingResult);
   public
-    constructor Create(AFormatXKey, APDFKey, ASearchKey: TShortCut;
-      const AOnFormatX, AOnPDF, AOnSearch: TNotifyEvent);
+    constructor Create(AFormatXKey, APDFKey, ASearchKey, ASnippet1Key,
+      ASnippet2Key, ASnippet3Key: TShortCut;
+      const AOnFormatX, AOnPDF, AOnSearch, AOnSnippet1, AOnSnippet2,
+      AOnSnippet3: TNotifyEvent);
     { IOTAKeyboardBinding }
     function GetBindingType: TBindingType;
     function GetDisplayName: string;
@@ -34,6 +44,7 @@ type
     FActionFormatX: TAction;
     FActionPDF: TAction;
     FActionSearch: TAction;
+    FActionSnippets: TAction;
     FActionSettings: TAction;
     FActionList: TActionList;
     FParentMenu: TMenuItem;
@@ -45,6 +56,11 @@ type
     procedure OnFormatXExecute(Sender: TObject);
     procedure OnPDFViewerExecute(Sender: TObject);
     procedure OnSearchExecute(Sender: TObject);
+    procedure OnSnippetsExecute(Sender: TObject);
+    procedure OnSnippetManagerSaved(Sender: TObject);
+    procedure OnSnippet1Execute(Sender: TObject);
+    procedure OnSnippet2Execute(Sender: TObject);
+    procedure OnSnippet3Execute(Sender: TObject);
     procedure OnSettingsExecute(Sender: TObject);
     function GetIniPath: string;
 
@@ -72,12 +88,13 @@ implementation
 
 uses
   RADEGit.Integration, RADE.Refactor, RADE.PDFViewer, RADE.Settings,
-  RADE.Search, Vcl.Forms, Winapi.Windows;
+  RADE.Search, RADE.CodeSnippets, DiscordPresenceWizard, Vcl.Forms,
+  Winapi.Windows;
 
 {$R 'Assets\Icons.res' 'Assets\Icons.rc'}
 
 const
-  RADE_WIZARD_ID = 'MrFluffy.RADEEssentials.Wizard';
+  RADE_WIZARD_ID = 'LunexCorp.RAD_Essentials.Wizard';
 
 var
   GlobalWizardInstance: TRADEWizard = nil;
@@ -98,7 +115,7 @@ begin
     end;
   except
     on E: Exception do
-      OutputDebugString(PChar('RADEssentials Registration Error: ' + E.Message));
+      OutputDebugString(PChar('RAD Essentials Registration Error: ' + E.Message));
   end;
 end;
 
@@ -106,6 +123,8 @@ procedure Unregister;
 var
   WizardServices: IOTAWizardServices;
 begin
+  RADECodeSnippets_Shutdown;
+
   if (GlobalWizardIndex >= 0) and
     Supports(BorlandIDEServices, IOTAWizardServices, WizardServices) then
     WizardServices.RemoveWizard(GlobalWizardIndex);
@@ -116,16 +135,24 @@ end;
 
 { TRADEKeyBinding }
 
-constructor TRADEKeyBinding.Create(AFormatXKey, APDFKey, ASearchKey: TShortCut;
-  const AOnFormatX, AOnPDF, AOnSearch: TNotifyEvent);
+constructor TRADEKeyBinding.Create(AFormatXKey, APDFKey, ASearchKey,
+  ASnippet1Key, ASnippet2Key, ASnippet3Key: TShortCut;
+  const AOnFormatX, AOnPDF, AOnSearch, AOnSnippet1, AOnSnippet2,
+  AOnSnippet3: TNotifyEvent);
 begin
   inherited Create;
   FFormatXKey := AFormatXKey;
   FPDFKey := APDFKey;
   FSearchKey := ASearchKey;
+  FSnippet1Key := ASnippet1Key;
+  FSnippet2Key := ASnippet2Key;
+  FSnippet3Key := ASnippet3Key;
   FOnFormatX := AOnFormatX;
   FOnPDF := AOnPDF;
   FOnSearch := AOnSearch;
+  FOnSnippet1 := AOnSnippet1;
+  FOnSnippet2 := AOnSnippet2;
+  FOnSnippet3 := AOnSnippet3;
 end;
 
 function TRADEKeyBinding.GetBindingType: TBindingType;
@@ -135,12 +162,12 @@ end;
 
 function TRADEKeyBinding.GetDisplayName: string;
 begin
-  Result := 'RADEssentials shortcuts';
+  Result := 'RAD Essentials shortcuts';
 end;
 
 function TRADEKeyBinding.GetName: string;
 begin
-  Result := 'MrFluffy.RADEEssentials.Keys';
+  Result := 'LunexCorp.RAD_Essentials.Keys';
 end;
 
 procedure TRADEKeyBinding.BindKeyboard(const BindingServices: IOTAKeyBindingServices);
@@ -151,6 +178,12 @@ begin
     BindingServices.AddKeyBinding([FPDFKey], DoPDF, nil);
   if FSearchKey <> 0 then
     BindingServices.AddKeyBinding([FSearchKey], DoSearch, nil);
+  if FSnippet1Key <> 0 then
+    BindingServices.AddKeyBinding([FSnippet1Key], DoSnippet1, nil);
+  if FSnippet2Key <> 0 then
+    BindingServices.AddKeyBinding([FSnippet2Key], DoSnippet2, nil);
+  if FSnippet3Key <> 0 then
+    BindingServices.AddKeyBinding([FSnippet3Key], DoSnippet3, nil);
 end;
 
 procedure TRADEKeyBinding.DoFormatX(const Context: IOTAKeyContext; KeyCode: TShortCut;
@@ -177,17 +210,56 @@ begin
     FOnSearch(nil);
 end;
 
+procedure TRADEKeyBinding.DoSnippet1(const Context: IOTAKeyContext;
+  KeyCode: TShortCut; var BindingResult: TKeyBindingResult);
+begin
+  BindingResult := krHandled;
+  if Assigned(FOnSnippet1) then
+    FOnSnippet1(nil);
+end;
+
+procedure TRADEKeyBinding.DoSnippet2(const Context: IOTAKeyContext;
+  KeyCode: TShortCut; var BindingResult: TKeyBindingResult);
+begin
+  BindingResult := krHandled;
+  if Assigned(FOnSnippet2) then
+    FOnSnippet2(nil);
+end;
+
+procedure TRADEKeyBinding.DoSnippet3(const Context: IOTAKeyContext;
+  KeyCode: TShortCut; var BindingResult: TKeyBindingResult);
+begin
+  BindingResult := krHandled;
+  if Assigned(FOnSnippet3) then
+    FOnSnippet3(nil);
+end;
+
 { TRADEWizard }
 
 procedure TRADEWizard.BindKeys(AFormatXKey, APDFKey, ASearchKey: TShortCut);
 var
   KeyServices: IOTAKeyboardServices;
+  Snippet1Key, Snippet2Key, Snippet3Key: TShortCut;
 begin
   UnbindKeys;
+  Snippet1Key := 0;
+  Snippet2Key := 0;
+  Snippet3Key := 0;
+  try
+    Snippet1Key := RADECodeSnippets_GetShortcut(1);
+    Snippet2Key := RADECodeSnippets_GetShortcut(2);
+    Snippet3Key := RADECodeSnippets_GetShortcut(3);
+  except
+    on E: Exception do
+      MessageDlg('Could not load code snippet shortcuts: ' + E.Message,
+        mtError, [mbOK], 0);
+  end;
   if Supports(BorlandIDEServices, IOTAKeyboardServices, KeyServices) then
     FKeyBindingIndex := KeyServices.AddKeyboardBinding(
       TRADEKeyBinding.Create(AFormatXKey, APDFKey, ASearchKey,
-        OnFormatXExecute, OnPDFViewerExecute, OnSearchExecute));
+        Snippet1Key, Snippet2Key, Snippet3Key, OnFormatXExecute,
+        OnPDFViewerExecute, OnSearchExecute, OnSnippet1Execute,
+        OnSnippet2Execute, OnSnippet3Execute));
 end;
 
 procedure TRADEWizard.UnbindKeys;
@@ -209,7 +281,7 @@ begin
   FSplashBitmap := Vcl.Graphics.TBitmap.Create;
   try
     FSplashBitmap.LoadFromResourceName(HInstance, 'ICONBMP');
-    SplashScreenServices.AddPluginBitmap('RADEssentials', FSplashBitmap.Handle, True);
+    SplashScreenServices.AddPluginBitmap('RAD Essentials', FSplashBitmap.Handle, True);
   except
     FreeAndNil(FSplashBitmap);
     raise;
@@ -224,10 +296,12 @@ begin
   AddSplashScreenInfo;
 
   CreateActionsAndMenus;
+  RADcord_Initialize;
 end;
 
 destructor TRADEWizard.Destroy;
 begin
+  RADcord_Shutdown;
   UnbindKeys;
   FreeAndNil(FSplashBitmap);
   RemoveMenus;
@@ -242,7 +316,7 @@ end;
 
 function TRADEWizard.GetIniPath: string;
 begin
-  Result := IncludeTrailingPathDelimiter(TPath.GetHomePath) + 'RADEEssentials_Settings.ini';
+  Result := IncludeTrailingPathDelimiter(TPath.GetHomePath) + 'RAD_Essentials_Settings.ini';
 end;
 
 procedure TRADEWizard.RefreshShortcuts;
@@ -268,17 +342,12 @@ begin
   if Assigned(FActionFormatX) then
     FActionFormatX.ShortCut := FormatXKey;
   if Assigned(FActionPDF) then
-  begin
     FActionPDF.ShortCut := PDFKey;
-    FActionPDF.Enabled := False;
-  end;
   if Assigned(FActionSearch) then
     FActionSearch.ShortCut := SearchKey;
 
   // code editor (a TAction shortcut alone never fires there). Re-bound on every refresh so
   // changes from the settings window apply immediately, no IDE restart needed.
-  if Assigned(FActionPDF) and not FActionPDF.Enabled then
-    PDFKey := 0;   // PDF viewer still disabled: don't hijack the key
   BindKeys(FormatXKey, PDFKey, SearchKey);
 end;
 
@@ -289,12 +358,12 @@ end;
 
 function TRADEWizard.GetName: string;
 begin
-  Result := 'RADEssentials';
+  Result := 'RAD Essentials';
 end;
 
 function TRADEWizard.GetMenuText: string;
 begin
-  Result := 'RADEssentials';
+  Result := 'RAD Essentials';
 end;
 
 function TRADEWizard.GetState: TWizardState;
@@ -333,7 +402,6 @@ begin
   FActionPDF.ActionList := FActionList;
   FActionPDF.Name := 'RADEActionPDF';
   FActionPDF.Caption := 'PDF Viewer';
-  FActionPDF.Enabled := False;
   FActionPDF.OnExecute := OnPDFViewerExecute;
 
   FActionSearch := TAction.Create(nil);
@@ -341,6 +409,12 @@ begin
   FActionSearch.Name := 'RADEActionSearch';
   FActionSearch.Caption := 'Search';
   FActionSearch.OnExecute := OnSearchExecute;
+
+  FActionSnippets := TAction.Create(nil);
+  FActionSnippets.ActionList := FActionList;
+  FActionSnippets.Name := 'RADEActionCodeSnippets';
+  FActionSnippets.Caption := 'Code Snippets Manager';
+  FActionSnippets.OnExecute := OnSnippetsExecute;
 
   FActionSettings := TAction.Create(nil);
   FActionSettings.ActionList := FActionList;
@@ -350,7 +424,7 @@ begin
 
   FParentMenu := TMenuItem.Create(MainMenu);
   FParentMenu.Name := 'RADEssentialsMainMenu';
-  FParentMenu.Caption := 'RADEssentials';
+  FParentMenu.Caption := 'RAD Essentials';
 
   // Add the Git integration's own submenu item to RAD Essentials.
   // RadeGit_Init must run before this call.
@@ -358,6 +432,10 @@ begin
 
   SubItem := TMenuItem.Create(FParentMenu);
   SubItem.Action := FActionSearch;
+  FParentMenu.Add(SubItem);
+
+  SubItem := TMenuItem.Create(FParentMenu);
+  SubItem.Action := FActionSnippets;
   FParentMenu.Add(SubItem);
 
   SubItem := TMenuItem.Create(FParentMenu);
@@ -395,6 +473,7 @@ begin
   FreeAndNil(FActionFormatX);
   FreeAndNil(FActionPDF);
   FreeAndNil(FActionSearch);
+  FreeAndNil(FActionSnippets);
   FreeAndNil(FActionSettings);
   FreeAndNil(FActionList);
 end;
@@ -414,11 +493,46 @@ begin
   RADESearch_Show;
 end;
 
+procedure TRADEWizard.OnSnippetsExecute(Sender: TObject);
+var
+  SelectedCode, Location: string;
+begin
+  try
+    RADECodeSnippets_CaptureSelection(SelectedCode, Location);
+    RADECodeSnippets_ShowManager(SelectedCode, Location, OnSnippetManagerSaved);
+  except
+    on E: Exception do
+      MessageDlg('Could not open the code snippets manager: ' + E.Message,
+        mtError, [mbOK], 0);
+  end;
+end;
+
+procedure TRADEWizard.OnSnippetManagerSaved(Sender: TObject);
+begin
+  RefreshShortcuts;
+end;
+
+procedure TRADEWizard.OnSnippet1Execute(Sender: TObject);
+begin
+  RADECodeSnippets_InsertByShortcut(1);
+end;
+
+procedure TRADEWizard.OnSnippet2Execute(Sender: TObject);
+begin
+  RADECodeSnippets_InsertByShortcut(2);
+end;
+
+procedure TRADEWizard.OnSnippet3Execute(Sender: TObject);
+begin
+  RADECodeSnippets_InsertByShortcut(3);
+end;
+
 procedure TRADEWizard.OnSettingsExecute(Sender: TObject);
 begin
   TRADESettingsForm.ShowSettings;
   if Assigned(GlobalWizardInstance) then
     GlobalWizardInstance.RefreshShortcuts;
+  RADcord_Refresh;
 end;
 
 end.

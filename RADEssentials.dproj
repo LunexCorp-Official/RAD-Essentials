@@ -89,8 +89,10 @@
         <DCCReference Include="vcledge.dcp"/>
         <DCCReference Include="RADE.Core.pas"/>
         <DCCReference Include="Utils\RADE_Search\RADE.Search.pas"/>
+        <DCCReference Include="Utils\RADE_Snippets\RADE.CodeSnippets.pas"/>
+        <DCCReference Include="Utils\RADE_PDFViewer\RADE.PDFium.pas"/>
         <DCCReference Include="Utils\RADE_PDFViewer\RADE.PDFViewer.pas">
-            <Form>RADEPDFViewerForm</Form>
+            <Form>RADEPDFViewerFrame</Form>
         </DCCReference>
         <DCCReference Include="Utils\RADE.Settings.pas">
             <Form>RADESettingsForm</Form>
@@ -107,6 +109,11 @@
         <DCCReference Include="Utils\RADE_Git\RADEGit.OAuth.pas"/>
         <DCCReference Include="Utils\RADE_Git\RADEGit.RepoApi.pas"/>
         <DCCReference Include="Utils\RADE_Git\RADEGit.Settings.pas"/>
+        <DCCReference Include="Utils\RADE_Discord\Wizard\DiscordPresenceWizard.pas"/>
+        <DCCReference Include="Utils\RADE_Discord\Config\RADcordConfig.pas"/>
+        <DCCReference Include="Utils\RADE_Discord\Common\RADcordPresence.pas"/>
+        <DCCReference Include="Utils\RADE_Discord\OTA\EditorNotifier.pas"/>
+        <DCCReference Include="Utils\RADE_Discord\Discord\DiscordRPC.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

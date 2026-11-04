@@ -2,7 +2,7 @@ object RADESettingsForm: TRADESettingsForm
   Left = 0
   Top = 0
   Caption = 'RADEssentials Settings'
-  ClientHeight = 412
+  ClientHeight = 580
   ClientWidth = 560
   Color = clWhite
   Font.Charset = DEFAULT_CHARSET
@@ -53,7 +53,7 @@ object RADESettingsForm: TRADESettingsForm
   end
   object PanelFooter: TPanel
     Left = 0
-    Top = 344
+    Top = 512
     Width = 560
     Height = 68
     Align = alBottom
@@ -88,7 +88,7 @@ object RADESettingsForm: TRADESettingsForm
     Left = 0
     Top = 94
     Width = 560
-    Height = 250
+    Height = 418
     Align = alClient
     BevelOuter = bvNone
     Color = clWhite
@@ -235,6 +235,59 @@ object RADESettingsForm: TRADESettingsForm
       ParentFont = False
       TabOrder = 2
       Text = 'Ctrl+Shift+A'
+    end
+    object LblRADcordTitle: TLabel
+      Left = 24
+      Top = 230
+      Width = 260
+      Height = 19
+      Caption = 'DISCORD RICH PRESENCE'
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = 8618883
+      Font.Height = -11
+      Font.Name = 'Segoe UI'
+      Font.Style = [fsBold]
+      ParentFont = False
+    end
+    object ChkRADcordFileName: TCheckBox
+      Left = 36
+      Top = 260
+      Width = 150
+      Height = 19
+      Caption = 'Show file name'
+      TabOrder = 3
+    end
+    object ChkRADcordProjectName: TCheckBox
+      Left = 200
+      Top = 260
+      Width = 150
+      Height = 19
+      Caption = 'Show project name'
+      TabOrder = 4
+    end
+    object ChkRADcordLineNumber: TCheckBox
+      Left = 364
+      Top = 260
+      Width = 150
+      Height = 19
+      Caption = 'Show line number'
+      TabOrder = 5
+    end
+    object ChkRADcordElapsedTime: TCheckBox
+      Left = 36
+      Top = 290
+      Width = 150
+      Height = 19
+      Caption = 'Show elapsed time'
+      TabOrder = 6
+    end
+    object ChkRADcordIdlePresence: TCheckBox
+      Left = 200
+      Top = 290
+      Width = 150
+      Height = 19
+      Caption = 'Show idle presence'
+      TabOrder = 7
     end
   end
 end
