@@ -1,0 +1,4 @@
+// RADcord Resource Script
+// Embeds application resources
+
+LOGO RCDATA "Resources\\logo.png"
